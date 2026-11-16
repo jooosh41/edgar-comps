@@ -1,5 +1,7 @@
 # edgar-comps
 
+[![tests](https://github.com/jooosh41/edgar-comps/actions/workflows/tests.yml/badge.svg)](https://github.com/jooosh41/edgar-comps/actions/workflows/tests.yml)
+
 Turns SEC filings into a banker-style Excel model in one command: a comparable-companies
 table and a DCF, built on live formulas that trace back to each 10-K.
 
@@ -19,25 +21,44 @@ Lionsgate Studios, Disney, Netflix), with prices from the November 13, 2026 clos
 | Audit | 7 warnings across 18 checks |
 
 The DCF sits well below the price because IMAX reinvests more than its capex line shows (equipment
-placed under revenue-sharing deals, and film assets). `assumptions/IMAX.csv` documents that override.
+placed under revenue-sharing deals, and film assets). `edgar_comps/assumptions/IMAX.csv` documents that override.
 `output/imax_comps_memo.md` is the written summary and audit. This is a model's output under stated
 assumptions, not investment advice.
 
-## Run it
+## Install and run
+
+Needs Python 3.10 or newer.
 
 ```bash
-pip install -r requirements.txt
-cp .env.example .env            # then put your email in it; the SEC requires a declared contact
-python -m edgar_comps --market  # IMAX and its peers, with live prices, beta and risk-free rate
-python -m edgar_comps           # same, without market data: type prices into the yellow cells
-python -m edgar_comps --peers media   # broader media set, DCF on Netflix
-python -m edgar_comps NFLX DIS CMCSA --target DIS --out output/dis.xlsx
-python -m edgar_comps --prices my_prices.csv    # CSV columns: ticker,price,date,source
-python -m edgar_comps.verify output/imax_comps.xlsx   # formula errors, audit result, tie-out
-python -m pytest                # 18 tests; the number checks need LibreOffice and skip without it
+pip install git+https://github.com/jooosh41/edgar-comps
+echo "SEC_USER_AGENT=edgar-comps your-email@example.com" > .env   # the SEC requires a declared contact
+edgar-comps --market
 ```
 
-Output lands in `output/`. `output/imax_comps.xlsx` is the main run; `output/sample_media_comps.xlsx` is the broader media set.
+That writes `output/comps.xlsx` in the folder you ran it from: IMAX and its peers, with live prices,
+beta and the risk-free rate. More:
+
+```bash
+edgar-comps NFLX DIS CMCSA --target DIS --market --out output/dis.xlsx
+edgar-comps --peers media --market        # broader media set, DCF on Netflix
+edgar-comps --prices my_prices.csv        # your own prices: ticker,price,date,source
+edgar-comps                               # no market data: type prices into the yellow cells
+```
+
+Peer lists are text files, one ticker per line with the DCF target first. `imax` and `media` are
+bundled; put your own in `./peers/<name>.txt` and run `--peers <name>`.
+
+## Develop
+
+```bash
+git clone https://github.com/jooosh41/edgar-comps && cd edgar-comps
+pip install -e ".[dev]"
+python -m pytest                                      # 18 tests; the number checks need LibreOffice
+python -m edgar_comps.verify output/imax_comps.xlsx   # formula errors, audit result, tie-out
+python scripts/stress_test.py                         # coverage sweep across 38 companies
+```
+
+Output lands in `output/`. `output/imax_comps.xlsx` is the committed example run.
 
 ## What the workbook contains
 
@@ -71,7 +92,7 @@ LibreOffice installed to calculate the formulas; otherwise read the Memo sheet i
 
 ## How it works
 
-1. `edgar.py` maps ticker to CIK and downloads the company's XBRL facts from `data.sec.gov` (cached in `data/cache`).
+1. `edgar.py` maps ticker to CIK and downloads the company's XBRL facts from `data.sec.gov` (cached in `~/.cache/edgar-comps`).
 2. `facts.py` keeps full-fiscal-year values from 10-Ks. Each line item has a priority list of XBRL tags because
    companies tag the same line differently. Restated years use the latest filing.
 3. `workbook.py` and `evaluator.py` write filing data as values and everything else as Excel formulas, so the model recalculates
@@ -90,7 +111,7 @@ Meta, Coca-Cola, Walmart, Netflix).
     for interest, which pulls in one-off non-operating items.
   - No combined D&A tag (Microsoft, Alphabet, Tesla): depreciation + amortization of intangibles.
   - Ticker moved to a new registrant with no 10-K history (Exxon): history comes from the old
-    registrant listed in `peers/predecessors.txt`.
+    registrant listed in `edgar_comps/peers/predecessors.txt`.
 - **Out of scope:** banks, insurers and REITs (EV/EBITDA and this DCF do not apply to them), and
   foreign companies that file a 20-F instead of a 10-K (Spotify, TSMC).
 - **Cannot be fixed with this data source:** Visa and Berkshire (share counts are reported per
@@ -101,9 +122,9 @@ Meta, Coca-Cola, Walmart, Netflix).
 
 The tool derives what it can from data: the discount rate (WACC sheet), tax rate (3-year average
 effective rate), margins, D&A and reinvestment (latest fiscal year). Anything you want to set yourself
-goes in `assumptions/<TICKER>.csv` as `key,value,note`; the note is printed next to the override in the
+goes in `./assumptions/<TICKER>.csv` as `key,value,note`; the note is printed next to the override in the
 workbook. Valid keys: `wacc`, `terminal_growth`, `tax_rate`, `ebit_margin`, `da_pct`, `capex_pct`,
-`nwc_pct`, `growth_y1`. `assumptions/IMAX.csv` holds the one override used in the IMAX run.
+`nwc_pct`, `growth_y1`. The bundled `edgar_comps/assumptions/IMAX.csv` holds the one override used in the IMAX run.
 
 ## Verified against filings
 

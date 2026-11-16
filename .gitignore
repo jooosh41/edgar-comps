@@ -1,8 +1,12 @@
 .env
-data/cache/
+data/
 __pycache__/
 .pytest_cache/
 .DS_Store
+build/
+dist/
+*.egg-info/
+.venv/
 output/*
 !output/imax_comps.xlsx
 !output/imax_comps_memo.md

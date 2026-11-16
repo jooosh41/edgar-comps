@@ -14,7 +14,7 @@ from urllib.parse import quote
 
 import requests
 
-from .edgar import CACHE
+from . import paths
 
 YAHOO = "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range={range}&interval={interval}"
 FRED = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DGS10"
@@ -23,8 +23,7 @@ MAX_AGE_SECONDS = 12 * 3600
 
 
 def _cached(url, name, headers=HEADERS):
-    CACHE.mkdir(parents=True, exist_ok=True)
-    path = CACHE / name
+    path = paths.cache_dir() / name
     if path.exists() and time.time() - path.stat().st_mtime < MAX_AGE_SECONDS:
         return path.read_text()
     response = requests.get(url, headers=headers, timeout=30)

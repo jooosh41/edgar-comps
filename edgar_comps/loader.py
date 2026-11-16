@@ -1,18 +1,14 @@
 """Load one company by ticker, falling back to a predecessor entity when needed.
 
 A corporate reorganisation can move a ticker to a new SEC registrant (new CIK) that has
-no 10-K history yet. peers/predecessors.txt maps such tickers to the old CIK.
+no 10-K history yet. The bundled peers/predecessors.txt maps such tickers to the old CIK.
 """
-from pathlib import Path
-
-from . import edgar, facts
-
-ROOT = Path(__file__).resolve().parent.parent
+from . import edgar, facts, paths
 
 
 def _predecessors():
     table = {}
-    path = ROOT / "peers" / "predecessors.txt"
+    path = paths.predecessors_file()
     if path.exists():
         for line in path.read_text().splitlines():
             parts = line.split("#")[0].split()

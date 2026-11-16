@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "edgar-comps"
+version = "0.1.0"
+description = "Turn SEC filings into an Excel comps table, WACC and DCF with live formulas and a rule-based audit."
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Joshua Liu" }]
+requires-python = ">=3.10"
+dependencies = ["requests>=2.31", "openpyxl>=3.1"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "pyflakes>=3.2"]
+
+[project.scripts]
+edgar-comps = "edgar_comps.__main__:main"
+
+[project.urls]
+Repository = "https://github.com/jooosh41/edgar-comps"
+
+[tool.setuptools]
+packages = ["edgar_comps"]
+
+[tool.setuptools.package-data]
+edgar_comps = ["peers/*.txt", "assumptions/*.csv"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

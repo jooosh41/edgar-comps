@@ -1,16 +1,14 @@
 """Download layer: ticker -> CIK -> XBRL company facts from SEC EDGAR.
 
-Every response is cached under data/cache so repeated runs do not hit the SEC.
+Every response is cached (see paths.cache_dir) so repeated runs do not hit the SEC.
 """
 import json
 import os
 import time
-from pathlib import Path
-
 import requests
 
-ROOT = Path(__file__).resolve().parent.parent
-CACHE = ROOT / "data" / "cache"
+from . import paths
+
 TICKER_URL = "https://www.sec.gov/files/company_tickers.json"
 FACTS_URL = "https://data.sec.gov/api/xbrl/companyfacts/CIK{cik:010d}.json"
 MIN_SECONDS_BETWEEN_REQUESTS = 0.2  # SEC limit is 10 requests/second
@@ -19,8 +17,8 @@ _last_request = 0.0
 
 
 def load_env():
-    """Read KEY=VALUE lines from .env into the environment (no dependency needed)."""
-    env_file = ROOT / ".env"
+    """Read KEY=VALUE lines from ./.env into the environment (no dependency needed)."""
+    env_file = paths.env_file()
     if not env_file.exists():
         return
     for line in env_file.read_text().splitlines():
@@ -35,16 +33,16 @@ def _user_agent():
     ua = os.environ.get("SEC_USER_AGENT")
     if not ua:
         raise RuntimeError(
-            "SEC_USER_AGENT is not set. Copy .env.example to .env and add a contact "
-            "email; the SEC blocks requests that do not declare one."
+            "SEC_USER_AGENT is not set. The SEC blocks requests that do not declare a contact. Either put\n"
+            "  SEC_USER_AGENT=edgar-comps your-email@example.com\n"
+            "in a file named .env in this folder, or set it as an environment variable."
         )
     return ua
 
 
 def _get_json(url, cache_name, max_age_hours=24):
     global _last_request
-    CACHE.mkdir(parents=True, exist_ok=True)
-    path = CACHE / cache_name
+    path = paths.cache_dir() / cache_name
     if path.exists() and time.time() - path.stat().st_mtime < max_age_hours * 3600:
         return json.loads(path.read_text())
     wait = MIN_SECONDS_BETWEEN_REQUESTS - (time.time() - _last_request)

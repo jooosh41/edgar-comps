@@ -1,13 +1,13 @@
-"""Command line: python -m edgar_comps NFLX DIS CMCSA --target NFLX"""
+"""Command line: edgar-comps NFLX DIS CMCSA --target NFLX   (or: python -m edgar_comps ...)"""
 import argparse
 import csv
 import sys
 from pathlib import Path
 
-from . import facts, market, workbook
-from .loader import load_company
+import requests
 
-ROOT = Path(__file__).resolve().parent.parent
+from . import facts, market, paths, workbook
+from .loader import load_company
 
 
 def read_prices(path):
@@ -32,20 +32,25 @@ def read_assumptions(path):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(prog="edgar_comps", description=__doc__)
+    parser = argparse.ArgumentParser(prog="edgar-comps", description=__doc__)
     parser.add_argument("tickers", nargs="*", help="peer tickers; default is the --peers file")
-    parser.add_argument("--peers", default="imax", help="name of a file in peers/, without .txt (imax or media)")
+    parser.add_argument("--peers", default="imax", help="peer list: imax or media (bundled), the name of ./peers/<name>.txt, or a path to a .txt file")
     parser.add_argument("--target", help="company to run the DCF on; default is the first ticker")
-    parser.add_argument("--out", default=str(ROOT / "output" / "comps.xlsx"))
+    parser.add_argument("--out", default=str(paths.default_output()), help="default: ./output/comps.xlsx")
     parser.add_argument("--prices", help="optional CSV: ticker,price,date,source")
     parser.add_argument("--market", action="store_true", help="fetch share prices, beta and the risk-free rate")
-    parser.add_argument("--assumptions", help="CSV of DCF overrides: key,value,note (default: assumptions/<TARGET>.csv if it exists)")
+    parser.add_argument("--assumptions", help="CSV of DCF overrides: key,value,note (default: ./assumptions/<TARGET>.csv, else the bundled example)")
     parser.add_argument("--years", type=int, default=5, choices=range(1, 6))
     args = parser.parse_args(argv)
 
-    tickers = args.tickers or [
-        line.split("#")[0].strip() for line in (ROOT / "peers" / f"{args.peers}.txt").read_text().splitlines()
-        if line.split("#")[0].strip()]
+    if args.tickers:
+        tickers = args.tickers
+    else:
+        try:
+            lines = paths.peers_file(args.peers).read_text().splitlines()
+        except FileNotFoundError as error:
+            sys.exit(str(error))
+        tickers = [line.split("#")[0].strip() for line in lines if line.split("#")[0].strip()]
     tickers = [t.upper() for t in tickers]
     target = (args.target or tickers[0]).upper()
     if target not in tickers:
@@ -58,6 +63,10 @@ def main(argv=None):
         except (KeyError, ValueError) as error:
             print(f"  skipped {ticker}: {error}", file=sys.stderr)
             continue
+        except RuntimeError as error:                      # no SEC contact configured
+            sys.exit(str(error))
+        except requests.RequestException as error:
+            sys.exit(f"Could not reach the SEC for {ticker}: {error}")
         gaps = facts.missing_items(company)
         print(f"  {ticker:6s} {len(company.year_ends)} years, latest {company.year_ends[-1]}"
               + (f"  MISSING: {'; '.join(gaps)}" if gaps else "")
@@ -80,8 +89,10 @@ def main(argv=None):
             print(f"  market data: {problem}", file=sys.stderr)
         print(f"  market data: {len(market_data['prices'])} prices, beta {'ok' if market_data['beta'] else 'missing'}, "
               f"risk-free {'ok' if market_data['risk_free'] else 'missing'}")
-    assumptions_path = Path(args.assumptions) if args.assumptions else ROOT / "assumptions" / f"{target}.csv"
-    assumptions = read_assumptions(assumptions_path) if assumptions_path.exists() else None
+    assumptions_path = Path(args.assumptions) if args.assumptions else paths.assumptions_file(target)
+    if args.assumptions and not assumptions_path.exists():
+        sys.exit(f"Assumptions file not found: {assumptions_path}")
+    assumptions = read_assumptions(assumptions_path) if assumptions_path else None
     if assumptions:
         print(f"  assumptions: {len(assumptions)} overrides from {assumptions_path.name}")
     workbook.build(companies, target, out, read_prices(args.prices) if args.prices else None, market_data, assumptions)
