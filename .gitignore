@@ -1,0 +1,8 @@
+.env
+data/cache/
+__pycache__/
+.pytest_cache/
+.DS_Store
+output/*
+!output/imax_comps.xlsx
+!output/imax_comps_memo.md

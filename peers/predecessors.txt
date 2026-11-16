@@ -1,0 +1,2 @@
+# ticker  old_CIK   # use the old registrant's 10-K history when the current one has none
+XOM  34088   # Exxon Mobil Corporation, before ExxonMobil Holdings Corp became the registrant

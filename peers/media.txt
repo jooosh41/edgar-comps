@@ -1,0 +1,9 @@
+# Media and entertainment peer set. One ticker per line; first is the default DCF target.
+NFLX
+DIS
+CMCSA
+FOXA
+LION
+AMCX
+IMAX
+ROKU

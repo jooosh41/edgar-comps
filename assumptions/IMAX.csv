@@ -1,0 +1,2 @@
+key,value,note
+capex_pct,0.165,"Three-year average of total reinvestment over revenue (14.2% in 2023, 18.8% in 2024, 16.4% in 2025). Reinvestment here is property and equipment, intangibles, equipment for joint revenue sharing arrangements, and film assets, all from the 10-K cash flow statement. The standard capex tag covers only the first two. Film assets are included because their amortization ($18.5M in FY2025) is inside the D&A the model adds back."

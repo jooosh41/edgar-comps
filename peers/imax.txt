@@ -1,0 +1,8 @@
+# IMAX and peers. One ticker per line; first is the default DCF target.
+IMAX
+DLB    # Dolby: premium-format technology licensing, the closest business model
+MCS    # Marcus: theatre operator
+AMC    # AMC Entertainment: theatre operator
+LION   # Lionsgate Studios: film studio
+DIS    # Disney: studio and IMAX's largest content supplier type
+NFLX   # Netflix: streaming benchmark
